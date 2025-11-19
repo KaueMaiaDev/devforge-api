@@ -1,11 +1,25 @@
-# 1. Usa uma imagem base do Java 21
-FROM eclipse-temurin:21-jdk-alpine
+# --- ETAPA 1: BUILD (Construção) ---
+# Usamos uma imagem que já tem o MAVEN instalado
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 
-# 2. Cria uma pasta de trabalho
+# Cria a pasta de trabalho
 WORKDIR /app
 
-# 3. Copia o arquivo que o Maven gera para dentro do servidor
-COPY target/*.jar app.jar
+# Copia todo o seu projeto para dentro do servidor
+COPY . .
 
-# 4. O comando que liga o servidor (igual ao botão Play do IntelliJ)
+# Manda o Maven compilar o projeto (gera o arquivo .jar)
+# O -DskipTests agiliza o processo pulando testes unitários no deploy
+RUN mvn clean package -DskipTests
+
+# --- ETAPA 2: RUN (Execução) ---
+# Agora usamos uma imagem leve apenas com o JAVA para rodar
+FROM eclipse-temurin:21-jdk-alpine
+
+WORKDIR /app
+
+# Copia o .jar gerado na etapa anterior (build) para cá
+COPY --from=build /app/target/*.jar app.jar
+
+# Liga o servidor
 ENTRYPOINT ["java", "-jar", "app.jar"]
