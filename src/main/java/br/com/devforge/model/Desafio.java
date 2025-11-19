@@ -1,43 +1,44 @@
 package br.com.devforge.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-
 import lombok.Data;
-
 import java.time.LocalDate;
 
-/**
- * Mapea automaticamente para uma tabela no banco de dados
- */
-@Data //  Lomnbok: Gera Getters, Setters, equals, hashCode, toString na compilação
-@Entity // JPA: Define que esta classe é uma entidade persistente
+@Data
+@Entity
 public class Desafio {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Titulo do desafio
     @NotBlank(message = "O título é obrigatório")
     private String titulo;
 
-    // Descrição técnica detalhada do que deve ser desenvolvido
-    @NotBlank
-    @Size(min = 10, message = "A descrição deve ter pelo menos 10 caracteres")
-    private String descricao;
+    // --- O CORAÇÃO DO BRIEFING ---
 
-    // Nível de senioridade sugerido
+    @NotBlank(message = "O contexto é obrigatório")
+    @Size(min = 20, message = "O contexto deve ser detalhado")
+    @Column(columnDefinition = "TEXT") // Texto longo para a história
+    private String contexto;
+
+    @NotBlank(message = "Os requisitos funcionais são obrigatórios")
+    @Column(columnDefinition = "TEXT") // Texto longo para a lista de funcionalidades
+    private String requisitosFuncionais;
+
+    @NotBlank(message = "Os requisitos técnicos são obrigatórios")
+    @Column(columnDefinition = "TEXT") // Texto longo para backend, banco, etc.
+    private String requisitosTecnicos;
+
+    // ------------------------------
+
+    @NotBlank(message = "O nível é obrigatório")
     private String nivel;
 
-    // Lista de tecnologias requeridas
+    @NotBlank(message = "A stack é obrigatória")
     private String stack;
 
-    // Data de publicação do desafio
-    // Inicializada automaticamente com a data do servidor
     private LocalDate dataCriacao = LocalDate.now();
 }
