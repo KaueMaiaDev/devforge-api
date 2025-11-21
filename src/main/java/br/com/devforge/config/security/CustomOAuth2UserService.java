@@ -90,13 +90,23 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             // Usuário JÁ EXISTE (Atualiza)
             LOGGER.info("Usuário existente logando: " + email);
             usuario = usuarioExistente.get();
-            usuario.setNome(nome != null ? nome : usuario.getNome());
+
+            // Se o nome no provedor mudou (e não for nulo), atualizamos apenas se o usuário não tiver personalizado
+            // Aqui optamos por manter o nome do banco se já existir, para não sobrescrever personalizações
+            if (usuario.getNome() == null || usuario.getNome().equals("Dev Sem Nome")) {
+                usuario.setNome(nome != null ? nome : usuario.getNome());
+            }
+
+            // Atualiza avatar sempre que logar
             usuario.setAvatarUrl(avatarUrl);
 
             // Se logou com GitHub agora, vincula o username
             if (githubUsername != null) {
                 usuario.setGithubUsername(githubUsername);
             }
+
+            // VETERANO: Mantém o cadastroCompleto como TRUE (se já estava) ou FALSE (se parou no meio)
+
         } else {
             // Usuário NOVO (Cria)
             LOGGER.info("Novo usuário detectado (Onboarding): " + email);
@@ -106,12 +116,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             usuario.setAvatarUrl(avatarUrl);
             usuario.setGithubUsername(githubUsername);
             usuario.setBio("Entusiasta de tecnologia pronto para desafios.");
-            // O nível "INICIANTE I" já é padrão na classe Usuario
+
+            // Marcamos como false. O Front-end vai ler isso e bloquear o acesso até o onboarding.
+            usuario.setCadastroCompleto(false);
         }
 
         usuarioRepository.save(usuario);
 
-        // Agora o return está fora dos ifs, garantindo que sempre retorne algo
+        // Garantindo que sempre retorne algo
         return oAuth2User;
     }
 }

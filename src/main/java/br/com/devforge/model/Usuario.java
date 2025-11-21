@@ -20,6 +20,9 @@ public class Usuario {
         return nome;
     }
 
+    public boolean isCadastroCompleto() {
+        return cadastroCompleto;
+    }
 
     // --- Setters ---
     public void setNome(String nome) {
@@ -40,6 +43,10 @@ public class Usuario {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public void setCadastroCompleto(boolean cadastroCompleto) {
+        this.cadastroCompleto = cadastroCompleto;
     }
 
     @Id
@@ -76,6 +83,16 @@ public class Usuario {
      */
     private LocalDateTime dataCadastro = LocalDateTime.now();
 
+    // --- Flag de Controle (ONBOARDING) ---
+
+    /**
+     * Define se o usuário já completou o cadastro inicial
+     * false = Criado pelo Login Social, mas pendente de confirmação
+     * true = Usuário ativo com acesso ao dashboard
+     */
+    private boolean cadastroCompleto = false;
+
+
     // --- Gamificação (Core do Negócio) ---
 
     /**
@@ -89,6 +106,7 @@ public class Usuario {
      * Valores possíveis: "INICIANTE I", "JUNIOR III", "PLENO III", "SENIOR III"
      */
     private String nivel = "INICIANTE I";
+
 
     // --- Regras de Negócio (Domain Logic) ---
 
