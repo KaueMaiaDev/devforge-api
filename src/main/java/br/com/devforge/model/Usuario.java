@@ -15,6 +15,33 @@ import java.time.LocalDateTime;
 @Table(name = "usuarios") // Plural para seguir convenções de SQL e evitar palavras reservadas
 public class Usuario {
 
+    // --- Getters ---
+    public String getNome() {
+        return nome;
+    }
+
+
+    // --- Setters ---
+    public void setNome(String nome) {
+        this.nome = nome;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public void setGithubUsername(String githubUsername) {
+        this.githubUsername = githubUsername;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
