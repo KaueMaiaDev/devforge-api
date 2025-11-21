@@ -10,7 +10,8 @@ COPY . .
 
 # Manda o Maven compilar o projeto (gera o arquivo .jar)
 # O -DskipTests agiliza o processo pulando testes unitários no deploy
-RUN mvn clean package -DskipTests
+# AQUI ESTÁ A CORREÇÃO: Adicionamos -Dfile.encoding=UTF-8 para evitar o erro MalformedInputException
+RUN mvn clean package -DskipTests -Dproject.build.sourceEncoding=UTF-8 -Dfile.encoding=UTF-8
 
 # --- ETAPA 2: RUN (Execução) ---
 # Agora usamos uma imagem leve apenas com o JAVA para rodar
