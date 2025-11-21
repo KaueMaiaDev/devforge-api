@@ -23,4 +23,4 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Liga o servidor
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Xmx350m", "-Xms350m", "-jar", "app.jar"]
