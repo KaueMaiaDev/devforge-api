@@ -13,14 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-/**
- * Serviço personalizado para processar o login via OAuth2 (Google/GitHub)
- * <p>
- * Esta classe intercepta a autenticação bem-sucedida no provedor externo e
- * sincroniza os dados do usuário com o banco de dados local
- * Garante que todo usuário logado tenha um registro na tabela 'usuarios' com XP e Nível
- * </p>
- */
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
@@ -29,101 +21,80 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    /**
-     * Método principal chamado automaticamente pelo Spring Security após o login no provedor.
-     *
-     * @param userRequest Dados da requisição de autenticação contendo tokens e infos do cliente.
-     * @return O usuário autenticado (OAuth2User) enriquecido com dados da sessão.
-     * @throws OAuth2AuthenticationException Em caso de falha na comunicação com o provedor.
-     */
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        // Carrega os dados brutos do usuário (JSON vindo do Google/GitHub)
         OAuth2User oAuth2User = super.loadUser(userRequest);
-
-        // Identifica qual provedor foi usado (ex: "google", "github")
-        String provador = userRequest.getClientRegistration().getRegistrationId();
-
-        // Sincroniza com o nosso banco de dados
-        return processarUsuario(provador, oAuth2User);
+        String provedor = userRequest.getClientRegistration().getRegistrationId();
+        return processarUsuario(provedor, oAuth2User);
     }
 
     private OAuth2User processarUsuario(String provedor, OAuth2User oAuth2User) {
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        String email;
-        String nome;
-        String avatarUrl;
+        // Logs para debug no Render (ajuda a ver o que está chegando)
+        LOGGER.info("Login recebido via: " + provedor);
+
+        String email = null;
+        String nome = null;
+        String avatarUrl = null;
         String githubUsername = null;
 
-        // Padrão Google (OpenID Connect)
         if ("github".equals(provedor)) {
+            // Tenta pegar o email direto
             email = (String) attributes.get("email");
             nome = (String) attributes.get("name");
             avatarUrl = (String) attributes.get("avatar_url");
             githubUsername = (String) attributes.get("login");
 
-            // Fallback: GitHub nem sempre retorna o email público.
-            // Se vier nulo, criamos um identificador único baseado no login.
-            if (email == null && githubUsername != null) {
-                email = githubUsername + "@no-email.github.com";
-                LOGGER.warning("Email não retornado pelo GitHub. Usando fallback: " + email);
+            // Se o email for nulo (privado), usamos o login (username) que é único e público
+            if (email == null) {
+                if (githubUsername != null) {
+                    email = githubUsername + "@no-email.github.com";
+                    LOGGER.warning("Email privado. Usando identificador baseado no login: " + email);
+                } else {
+                    // Caso extremo: sem email e sem login (muito raro no GitHub)
+                    throw new OAuth2AuthenticationException("Erro: GitHub não retornou email nem login.");
+                }
             }
         } else {
-            // Padrão Google (OpenID Connect)
+            // Google
             email = (String) attributes.get("email");
             nome = (String) attributes.get("name");
             avatarUrl = (String) attributes.get("picture");
         }
 
-        // Verificação de Integridade
+        // Validação final
         if (email == null) {
-            LOGGER.severe("Erro: Provedor " + provedor + " não retornou um email identificável.");
-            throw new OAuth2AuthenticationException("Email não encontrado no provedor OAuth2");
+            throw new OAuth2AuthenticationException("Falha crítica: Email não identificado.");
         }
 
-        // Persistência no Banco
+        // Ajuste de nome
+        if (nome == null || nome.isEmpty()) {
+            nome = githubUsername != null ? githubUsername : "Dev Sem Nome";
+        }
+
         Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(email);
         Usuario usuario;
 
         if (usuarioExistente.isPresent()) {
-            // Usuário JÁ EXISTE (Atualiza)
-            LOGGER.info("Usuário existente logando: " + email);
+            LOGGER.info("Login de veterano: " + email);
             usuario = usuarioExistente.get();
-
-            // Se o nome no provedor mudou (e não for nulo), atualizamos apenas se o usuário não tiver personalizado
-            // Aqui optamos por manter o nome do banco se já existir, para não sobrescrever personalizações
-            if (usuario.getNome() == null || usuario.getNome().equals("Dev Sem Nome")) {
-                usuario.setNome(nome != null ? nome : usuario.getNome());
+            if (usuario.getAvatarUrl() == null || usuario.getAvatarUrl().isEmpty()) {
+                usuario.setAvatarUrl(avatarUrl);
             }
-
-            // Atualiza avatar sempre que logar
-            usuario.setAvatarUrl(avatarUrl);
-
-            // Se logou com GitHub agora, vincula o username
-            if (githubUsername != null) {
-                usuario.setGithubUsername(githubUsername);
-            }
-
-            // VETERANO: Mantém o cadastroCompleto como TRUE (se já estava) ou FALSE (se parou no meio)
-
+            // Mantém status atual
         } else {
-            // Usuário NOVO (Cria)
-            LOGGER.info("Novo usuário detectado (Onboarding): " + email);
+            LOGGER.info("Novo cadastro iniciado: " + email);
             usuario = new Usuario();
             usuario.setEmail(email);
-            usuario.setNome(nome != null ? nome : "Dev Sem Nome");
+            usuario.setNome(nome);
             usuario.setAvatarUrl(avatarUrl);
             usuario.setGithubUsername(githubUsername);
-            usuario.setBio("Entusiasta de tecnologia pronto para desafios.");
-
-            // Marcamos como false. O Front-end vai ler isso e bloquear o acesso até o onboarding.
-            usuario.setCadastroCompleto(false);
+            usuario.setBio("Novo no DevForge.");
+            usuario.setCadastroCompleto(false); // Trava de Onboarding
         }
 
         usuarioRepository.save(usuario);
-
-        // Garantindo que sempre retorne algo
         return oAuth2User;
     }
 }

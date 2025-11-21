@@ -25,27 +25,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Ativa o CORS usando o bean corsConfigurationSource definido abaixo
                 .cors(Customizer.withDefaults())
-
-                // Desabilita CSRF (padrão para APIs REST Stateless)
-                .csrf(AbstractHttpConfigurer::disable)
-
-                // Regras de acesso
+                .csrf(AbstractHttpConfigurer::disable) // Desabilita CSRF (essencial para testes locais)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/error", "/login/**", "/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/desafios/**", "/solucoes/**").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // Configuração do Login Social (OAuth2)
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        // IMPORTANTE: Redireciona para o Front-end (Vite) após o login com sucesso
-                        // Se estiver em produção, troque localhost:5173 pela URL do seu site no Vercel/Netlify
+                        // Redirecionamento fixo para o Front-end após sucesso
                         .defaultSuccessUrl("http://localhost:5173", true)
+                        // Se falhar, vai para uma rota de erro que podemos ver
+                        .failureUrl("/login?error=true")
                 );
 
         return http.build();
@@ -54,16 +48,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // Lista EXPLICITAMENTE quem pode acessar sua API (CORS)
-        // Adicione a URL de produção do front-end aqui quando tiver (ex: https://meu-app.vercel.app)
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
-
+        // Libera explicitamente as origens
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173", "https://devforge-api.onrender.com"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-
-        // CRUCIAL: Permite enviar Cookies/Sessão entre domínios diferentes
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); // IMPORTANTE para cookies
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

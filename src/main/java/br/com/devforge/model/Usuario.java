@@ -40,6 +40,10 @@ public class Usuario {
         return githubUsername;
     }
 
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
     // --- Setters ---
     public void setNome(String nome) {
         this.nome = nome;
