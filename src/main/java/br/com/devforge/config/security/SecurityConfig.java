@@ -15,13 +15,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Configuração central de Segurança da API DevForge.
- * <p>
- * Esta classe define as regras de acesso (quem pode ver o quê), configura o suporte a CORS
- * para o Frontend (React) e integra o fluxo de login OAuth2 (Google/GitHub).
- * </p>
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -29,63 +22,47 @@ public class SecurityConfig {
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
 
-    /**
-     * Define a cadeia de filtros de segurança (Security Filter Chain).
-     * Configura as regras HTTP, proteção CSRF e autenticação.
-     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CORREÇÃO 1: Habilita CORS usando a configuração definida no método abaixo
+                // Ativa o CORS usando o bean corsConfigurationSource definido abaixo
                 .cors(Customizer.withDefaults())
 
-                // Desabilita CSRF pois nossa API é Stateless/Rest
+                // Desabilita CSRF (padrão para APIs REST Stateless)
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // Regras de Autorização (Quem pode acessar o quê)
+                // Regras de acesso
                 .authorizeHttpRequests(auth -> auth
-                        // Rotas Públicas (Acesso livre sem login)
                         .requestMatchers("/", "/error", "/login/**", "/oauth2/**").permitAll()
-
-                        // Permitir listar desafios (GET) os desafios, mas apenas logados criem (POST)
                         .requestMatchers(HttpMethod.GET, "/desafios/**", "/solucoes/**").permitAll()
-
-                        // Todas as outras rotas exigem autenticação
                         .anyRequest().authenticated()
                 )
 
-                // Configuração do Login OAuth2 (Social Login)
+                // Configuração do Login Social (OAuth2)
                 .oauth2Login(oauth2 -> oauth2
-                        // Injeta nosso serviço customizado para salvar o usuário no banco após login
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
-                        // Redirecionamento após login com sucesso (Manda de volta para o React na porta 3000)
-                        .defaultSuccessUrl("http://localhost:3000", true)
+                        // IMPORTANTE: Redireciona para o Front-end (Vite) após o login com sucesso
+                        // Se estiver em produção, troque localhost:5173 pela URL do seu site no Vercel/Netlify
+                        .defaultSuccessUrl("http://localhost:5173", true)
                 );
 
         return http.build();
     }
 
-    /**
-     * Configuração Global de CORS.
-     * Permite que o Frontend (http://localhost:3000) converse com este Backend (http://localhost:8080).
-     * Sem isso, o navegador bloqueia as requisições por segurança.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Libera Frontend
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Lista EXPLICITAMENTE quem pode acessar sua API (CORS)
+        // Adicione a URL de produção do front-end aqui quando tiver (ex: https://meu-app.vercel.app)
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
 
-        // Métodos HTTP permitidos
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Headers permitidos (JSON, Auth, etc)
         configuration.setAllowedHeaders(List.of("*"));
 
-        // Permite envio de credenciais (cookies/tokens)
+        // CRUCIAL: Permite enviar Cookies/Sessão entre domínios diferentes
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
