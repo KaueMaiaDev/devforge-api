@@ -24,6 +24,22 @@ public class Usuario {
         return cadastroCompleto;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public String getLocalizacao() {
+        return localizacao;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public String getGithubUsername() {
+        return githubUsername;
+    }
+
     // --- Setters ---
     public void setNome(String nome) {
         this.nome = nome;
@@ -43,6 +59,10 @@ public class Usuario {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public void setLocalizacao(String localizacao) {
+        this.localizacao = localizacao;
     }
 
     public void setCadastroCompleto(boolean cadastroCompleto) {
